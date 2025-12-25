@@ -1,7 +1,5 @@
 import sys
 
-from tqdm import tqdm
-
 
 def get_tiles():
     tiles = [line.strip().split(',') for line in sys.stdin]
@@ -11,128 +9,107 @@ def get_tiles():
     return tiles
 
 
-def contains(perimeter, candidate, tiles):
-    def is_corner(tile, tiles):
-        return tile in tiles
-
-    def has_north(x, y, perimeter):
-        for y_ in range(y, -1, -1):
-            if (x, y_) in perimeter:
-                return True
-        return False
-
-    def has_east(x, y, perimeter):
-        for x_ in range(x, 100_000+1):
-            if (x_, y) in perimeter:
-                return True
-        return False
-
-    def has_south(x, y, perimeter):
-        for y_ in range(y, 100_000+1):
-            if (x, y_) in perimeter:
-                return True
-        return False
-
-    def has_west(x, y, perimeter):
-        for x_ in range(x, -1, -1):
-            if (x_, y) in perimeter:
-                return True
-        return False
-
-    for corner in candidate:
-        if not is_corner(corner, tiles) and not (\
-                has_north(*corner, perimeter) and \
-                has_east(*corner, perimeter) and \
-                has_south(*corner, perimeter) and \
-                has_west(*corner, perimeter) \
-            ):
-            # print('no')
-            return False
-
-    # print('yes')
-    return True
-
-
-def get_perimeter(tiles):
-    perimeter = set()
+def get_segments(tiles):
+    segments = {
+        'X': [], 'Y': []
+    }
 
     for (x1, y1), (x2, y2) in zip(tiles, tiles[1:]):
+        x1, x2 = sorted([x1, x2])
+        y1, y2 = sorted([y1, y2])
+        if x1 == x2:
+            segment = (x1, y1, y2)
+            segments['Y'].append(segment)
+        elif y1 == y2:
+            segment = (y1, x1, x2)
+            segments['X'].append(segment)
 
-        if x2 > x1:
-            X = range(x1, x2+1)
-            Y = [y1]*len(X)
-        elif y2 > y1:
-            Y = range(y1, y2+1)
-            X = [x1]*len(Y)
-        elif x2 < x1:
-            X = range(x1, x2-1, -1)
-            Y = [y1]*len(X)
-        elif y2 < y1:
-            Y = range(y1, y2-1, -1)
-            X = [x1]*len(Y)
+    (x1, y1), (x2, y2) = tiles[-1], tiles[0]
 
-        for x, y in zip(X, Y):
-            perimeter.add((x, y))
+    x1, x2 = sorted([x1, x2])
+    y1, y2 = sorted([y1, y2])
+    if x1 == x2:
+        segment = (x1, y1, y2)
+        segments['Y'].append(segment)
+    elif y1 == y2:
+        segment = (y1, x1, x2)
+        segments['X'].append(segment)
 
-    return perimeter
-
-
-def get_candidate(x1, y1, x2, y2):
-    # print(f'get_candidate({x1}, {y1}, {x2}, {y2})')
-    top_left, top_right = (min(x1, x2), min(y1, y2)), (max(x1, x2), min(y1, y2))
-    bottom_left, bottom_right = (min(x1, x2), max(y1, y2)), (max(x1, x2), max(y1, y2))
-
-    return [top_left, top_right, bottom_right, bottom_left]
+    return segments
 
 
-def get_candidates(tiles):
-    candidates = []
-    for i, (x1, y1) in enumerate(tiles):
-        for (x2, y2) in tiles[i+1:]:
-            # print(f'{x1},{y1} + {x2},{y2}')
-            if x1 <= x2 and y1 <= y2:
-                candidate = get_candidate(x1, y1, x2, y2)
-            else:
-                candidate = get_candidate(x2, y2, x1, y1)
-
-            # print('->', candidate)
-            candidates.append(candidate)
-
-    return candidates
-
-
-def get_area(c1, c2, c3, c4):
-    (x1, y1), (x2, y2) = c1, c2
-    (x3, y3), (x4, y4) = c3, c4
-
-    width = (x2-x1) + 1
-    height = (y3-y1) + 1
+def get_area(x1, x2, y1, y2):
+    width = abs(x1-x2) + 1
+    height = abs(y1-y2) + 1
 
     area = width * height
 
     return area
 
 
+def cuts(rect_x1, rect_x2, rect_y1, rect_y2, X, Y):
+    for (segment_x, segment_y1, segment_y2) in Y:
+        if rect_x1 < segment_x < rect_x2 and not (segment_y2 <= rect_y1 or rect_y2 <= segment_y1):
+            return True
+
+    for (segment_y, segment_x1, segment_x2) in X:
+        if rect_y1 < segment_y < rect_y2 and not (segment_x2 <= rect_x1 or rect_x2 <= segment_x1):
+            return True
+
+    return False
+
+
+def is_outside(rectangle, X, Y):
+    def get_midpoint(x1, x2, y1, y2):
+        x = (x1+x2) / 2
+        y = (y1+y2) / 2
+        return (x, y)
+
+    def get_ray(x, y):
+        X_max = max(x_max for (_, _, x_max) in X)
+        return (y, x, X_max+1)
+
+    def intersects(y, x1, x2, x, y1, y2):
+        return x1 < x < x2 and y1 < y < y2
+
+    midpoint = get_midpoint(*rectangle)
+    ray = get_ray(*midpoint)
+
+    num_intersections = 0
+    for y in Y:
+        num_intersections += intersects(*ray, *y)
+
+    if num_intersections % 2 == 1:
+        return False
+    else:
+        return True
+
+
+def get_rectangle(x1, y1, x2, y2):
+    x1, x2 = sorted([x1, x2])
+    y1, y2 = sorted([y1, y2])
+
+    return x1, x2, y1, y2
+
+
 if __name__ == '__main__':
     tiles = get_tiles()
+    perimeter = get_segments(tiles)
 
-    print('Getting perimeter...')
-
-    perimeter = get_perimeter(tiles)
-
-    print('done')
-
-    print('Getting candidates...')
-
-    candidates = get_candidates(tiles)
-
-    print('done')
+    n = len(tiles)
 
     max_area = 0
-    for candidate in tqdm(candidates):
-        # print(candidate)
-        if contains(perimeter, candidate, tiles):
-            area = get_area(*candidate)
+    for i in range(n-1):
+        for j in range(i+1, n):
+            rectangle = get_rectangle(*tiles[i], *tiles[j])
+
+            if cuts(*rectangle, **perimeter):
+                continue
+
+            if is_outside(rectangle, **perimeter):
+                continue
+
+            area = get_area(*rectangle)
             max_area = max(area, max_area)
 
     print(max_area)
