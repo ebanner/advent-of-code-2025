@@ -1,7 +1,5 @@
 import sys
 
-import time
-
 
 def parse(line):
     node, neighbors_str = line.split(':')
@@ -20,7 +18,6 @@ def get_graph():
         graph[node] = neighbors
 
     return graph
-
 
 
 def get_num_paths(source, target, graph, num_paths_init=1):
@@ -55,26 +52,24 @@ def get_num_paths(source, target, graph, num_paths_init=1):
     num_paths = {node: 0 for node in get_nodes()}
     num_paths[source] = num_paths_init
 
-    def ready(node):
-        if node == source:
-            return True
-        for node_ in graph:
-            if node not in graph[node_]:
-                continue
-            if num_paths[node_] == 0:
-                return False
-        return True
+    visited = set()
+
+    def has_visited_all_in_nodes(node):
+        in_nodes = [node_ for node_ in graph if node in graph[node_]]
+        return all(in_node in visited for in_node in in_nodes)
 
     frontier = {source}
+
     while True:
-        # print(len(frontier))
-        if len(frontier) == 0:
-            # print('breaking')
+        if not frontier:
             break
 
         new_frontier = set()
         for node in frontier:
-            if not ready(node):
+            if node in visited:
+                continue
+
+            if not has_visited_all_in_nodes(node):
                 new_frontier.add(node)
                 continue
 
@@ -82,16 +77,10 @@ def get_num_paths(source, target, graph, num_paths_init=1):
                 num_paths[next] += num_paths[node]
                 new_frontier.add(next)
 
-        if frontier == new_frontier:
-            break
+            if has_visited_all_in_nodes(node):
+                visited.add(node)
 
         frontier = new_frontier
-
-        # print(frontier)
-
-        # print(frontier)
-
-        # time.sleep(.1)
 
     return num_paths
 
@@ -99,44 +88,8 @@ def get_num_paths(source, target, graph, num_paths_init=1):
 if __name__ == '__main__':
     G = get_graph()
 
-    num_paths = get_num_paths('svr', 'dac', G)
-
-    print('svr -> dac', num_paths['dac'])
-
-    num_paths = get_num_paths('dac', 'fft', G, num_paths['dac'])
-
-    print('dac -> fft', num_paths.get('fft', 0))
-
-    num_paths = get_num_paths('fft', 'out', G, num_paths.get('fft', 0))
-
-    print('fft -> out', num_paths['out'])
-
-    print()
-
-    svr_dac_fft_out = num_paths['out']
-
-    print('svr -> dac -> fft -> out', svr_dac_fft_out)
-
-    print()
-
     num_paths = get_num_paths('svr', 'fft', G)
-
-    print('svr -> fft', num_paths['fft'])
-
     num_paths = get_num_paths('fft', 'dac', G, num_paths['fft'])
-
-    print('fft -> dac', num_paths.get('dac', 0))
-
     num_paths = get_num_paths('dac', 'out', G, num_paths['dac'])
 
-    print('dac -> out', num_paths['out'])
-
-    print()
-
-    print('svr -> fft -> dac -> out', num_paths['out'])
-
-    print()
-
-    svr_fft_dac_out = num_paths['out']
-
-    print(svr_dac_fft_out + svr_fft_dac_out)
+    print(num_paths['out'])
