@@ -1,3 +1,3 @@
 # advent-of-code-2025
 
-<img width="1012" height="881" alt="image" src="https://github.com/user-attachments/assets/d00350f9-25cc-445e-acfc-457d1db8b9a7" />
+<img width="1013" height="873" alt="image" src="https://github.com/user-attachments/assets/206cf953-f8d1-4799-bc1a-902bd5dbd834" />
